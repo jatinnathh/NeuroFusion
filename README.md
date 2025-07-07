@@ -21,7 +21,7 @@
 - **Cloud**: Docker 
 
 ##  App Overview and working
-> Watch web demo (static/assets/web_neuro.mp4)
+> [Watch Web Demo (Download/View)](https://raw.githubusercontent.com/jatinnathh/NeuroFusion/main/static/assets/web_neuro%20(1).mp4)
 
 ##  How to Run (Local Dev)
 
