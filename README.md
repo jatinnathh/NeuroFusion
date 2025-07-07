@@ -25,7 +25,9 @@
 
 
 ##  Example Generations
-<img src="https://github.com/user-attachments/assets/2e664f49-05cb-4172-b9db-70ffc4fe66d6" width="400"/>
+<img src="https://github.com/user-attachments/assets/2e664f49-05cb-4172-b9db-70ffc4fe66d6" width="300"/>
+
+
 ##  How to Run (Local Dev)
 
 ```bash
