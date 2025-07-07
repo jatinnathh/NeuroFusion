@@ -6,7 +6,7 @@
 ##  Features
 
 -  **Text-to-Image**: Generate AI art from written prompts using a custom Stable Diffusion pipeline.
-- 🖼 **Image-to-Image**: Transform existing images based on new prompts or styles.
+-  **Image-to-Image**: Transform existing images based on new prompts or styles.
 -  Built with **Expo** for seamless deployment across Android, iOS, and Web.
 -  FastAPI backend for image processing and queue management.
 -  CLIP Tokenizer + Custom UNet-based Diffusion Model integration.
