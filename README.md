@@ -25,7 +25,7 @@
 
 
 ##  Example Generations
-![Image](https://github.com/user-attachments/assets/2e664f49-05cb-4172-b9db-70ffc4fe66d6)
+<img src="https://github.com/user-attachments/assets/2e664f49-05cb-4172-b9db-70ffc4fe66d6" width="400"/>
 ##  How to Run (Local Dev)
 
 ```bash
