@@ -40,6 +40,6 @@ docker compose up --build
 ## Reference papers
 
 - Rombach, R., Blattmann, A., Lorenz, D., Esser, P., & Ommer, B. (2022). [High-Resolution Image Synthesis with Latent Diffusion Models](https://arxiv.org/pdf/2112.10752). 
-- Ho, J., Jain, A., & Abbeel, P. (2020). [Denoising Diffusion Implicit Models](https://arxiv.org/abs/2006.11239).
+- Ho, J., Jain, A., & Abbeel, P. (2020). [Denoising Diffusion Implicit Models](https://arxiv.org/pdf/2006.11239).
 
 
