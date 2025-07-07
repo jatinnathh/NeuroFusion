@@ -38,9 +38,9 @@
 ## Image Variations by Parameter Tuning
 Below are outputs generated using the same prompt but different cgf_scale, steps, seed and other parameters
 
-<img src="https://github.com/user-attachments/assets/fd2481b9-4275-454b-b602-1ad767c07525" width="300"/>
+<img src="https://github.com/user-attachments/assets/fd2481b9-4275-454b-b602-1ad767c07525" width="700"/>
 
-<img src="https://github.com/user-attachments/assets/9117e6b3-c8fc-4351-9e6a-a0c3c2da02eb" width="300"/>
+<img src="https://github.com/user-attachments/assets/9117e6b3-c8fc-4351-9e6a-a0c3c2da02eb" width="700"/>
 
 
 ##  How to Run (Local Dev)
