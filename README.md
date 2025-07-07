@@ -21,7 +21,7 @@
 - **Cloud**: Docker 
 
 ##  App Overview and working
-> _Add screenshots here if needed (e.g., generation screen, queue, admin panel)_
+> Watch web demo (static/assets/web_neuro.mp4)
 
 ##  How to Run (Local Dev)
 
