@@ -1,0 +1,13 @@
+# Ignore dependencies
+node_modules/
+.expo/
+dist/
+build/
+.env
+*.log
+*.lock
+__pycache__/
+*.pyc
+.DS_Store
+.vscode/
+.idea/
