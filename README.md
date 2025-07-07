@@ -35,9 +35,13 @@
 <img src="https://github.com/user-attachments/assets/b56904ef-b78c-46e6-855e-c541019a423a" width="300"/>
 <img src="https://github.com/user-attachments/assets/a680e117-b572-4b19-a17b-06da2ca6a1d0" width="300"/>
 
-## Prompt Variations by Parameter Tuning
+## Image Variations by Parameter Tuning
 Below are outputs generated using the same prompt but different cgf_scale, steps, seed and other parameters
 
+<img width="1204" height="621" alt="Image" src="https://github.com/user-attachments/assets/fd2481b9-4275-454b-b602-1ad767c07525" />
+
+
+<img width="1199" height="612" alt="Image" src="https://github.com/user-attachments/assets/9117e6b3-c8fc-4351-9e6a-a0c3c2da02eb" />
 
 
 ##  How to Run (Local Dev)
