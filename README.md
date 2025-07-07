@@ -1,6 +1,4 @@
 
-![Expo](https://img.shields.io/badge/built_with-Expo-blue)
-![FastAPI](https://img.shields.io/badge/backend-FastAPI-green)
 
 #  NeuroFusion
 
