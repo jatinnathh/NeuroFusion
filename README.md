@@ -7,9 +7,11 @@
 
 -  **Text-to-Image**: Generate AI art from written prompts using a custom Stable Diffusion pipeline.
 -  **Image-to-Image**: Transform existing images based on new prompts or styles.
+-  **Prompt Queueing**: All image generation requests are queued and processed sequentially.
+-  **Cancel Generation**: Users can cancel pending or in-progress image generation tasks from their queue.
 -  Built with **Expo** for seamless deployment across Android, iOS, and Web.
--  FastAPI backend for image processing and queue management.
--  CLIP Tokenizer + Custom UNet-based Diffusion Model integration.
+-  FastAPI backend for image processing, queuing, and cancellation logic.
+-  Integrated **CLIP Tokenizer** + Custom **UNet-based Diffusion Model** for high-quality generation.
 
 ##  Tech Stack
 
@@ -18,8 +20,7 @@
 - **Database**: MySQL / SQLite 
 - **Cloud**: Docker 
 
-##  Screenshots
-
+##  App Overview and working
 > _Add screenshots here if needed (e.g., generation screen, queue, admin panel)_
 
 ##  How to Run (Local Dev)
