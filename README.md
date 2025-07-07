@@ -35,6 +35,8 @@
 <img src="https://github.com/user-attachments/assets/b56904ef-b78c-46e6-855e-c541019a423a" width="300"/>
 <img src="https://github.com/user-attachments/assets/a680e117-b572-4b19-a17b-06da2ca6a1d0" width="300"/>
 
+## Prompt Variations by Parameter Tuning
+Below are outputs generated using the same prompt but different cgf_scale, steps, seed and other parameters
 
 
 
