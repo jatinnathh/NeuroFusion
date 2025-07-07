@@ -1,3 +1,4 @@
+![Banner](static/assets/your_banner_image.png)
 
 #  NeuroFusion
 
