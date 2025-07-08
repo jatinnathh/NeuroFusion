@@ -37,7 +37,6 @@
 
 ## Image Variations by Parameter Tuning
 Below are outputs generated using the same prompt but different cgf_scale, steps, seed and other parameters.
-
 I have kept the parameters constant in the code for more consistent and visually coherent results across generations.
 <img src="https://github.com/user-attachments/assets/fd2481b9-4275-454b-b602-1ad767c07525" width="700"/>
 
