@@ -2,7 +2,7 @@
 
 #  NeuroFusion
 
-**NeuroFusion** is a modern mobile application built with **React Native (Expo)** that allows users to generate AI-powered images using both **text-to-image** and **image-to-image** diffusion techniques. This project was developed during my internship at **Innova Solutions**.
+**NeuroFusion** is a modern mobile application built from scratch using diffusion pipeline using pytorch and also supports **React Native (Expo)** that allows users to generate AI-powered images using both **text-to-image** and **image-to-image** diffusion techniques. This project was developed during my internship at **Innova Solutions**.
 
 ##  Features
 
