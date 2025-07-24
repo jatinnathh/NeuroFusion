@@ -5,7 +5,7 @@
 **NeuroFusion** is a modern mobile application built from scratch diffusion using pytorch and also supports **React Native (Expo)** that allows users to generate AI-powered images using both **text-to-image** and **image-to-image** diffusion techniques. This project was developed during my internship at **Innova Solutions**.
 
 ##  Features
-
+ 
 -  **Text-to-Image**: Generate AI art from written prompts using a custom Stable Diffusion pipeline.
 -  **Image-to-Image**: Transform existing images based on new prompts or styles.
 -  **Prompt Queueing**: All image generation requests are queued and processed sequentially.
