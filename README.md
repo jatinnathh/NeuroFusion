@@ -20,11 +20,6 @@
 - **Database**: MySQL / SQLite 
 - **Cloud**: Docker 
 
-##  App Overview and working
-> [Watch Web Demo (Download/View)](https://github.com/user-attachments/assets/4dfeb53a-b648-4bef-9265-82cfb9ad1df7)
-
-> [Watch Mobile Demo (Download/View)](https://github.com/user-attachments/assets/e8cfd03a-a0ef-413e-98a9-2ec217bc2880)
-
 ##  Example Generations
 <img src="https://github.com/user-attachments/assets/2e664f49-05cb-4172-b9db-70ffc4fe66d6" width="300"/>
 
@@ -43,6 +38,11 @@ Below are a few example outputs generated using the same prompt. Differences in 
 <img width="1199" height="612" alt="Image" src="https://github.com/user-attachments/assets/5c3ba0b9-5ddc-45d0-8b79-42e2beb60211" />
 
 
+
+##  App Overview and working
+> [Watch Web Demo (Download/View)](https://github.com/user-attachments/assets/4dfeb53a-b648-4bef-9265-82cfb9ad1df7)
+
+> [Watch Mobile Demo (Download/View)](https://github.com/user-attachments/assets/e8cfd03a-a0ef-413e-98a9-2ec217bc2880)
 
 
 
