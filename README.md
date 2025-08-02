@@ -21,7 +21,7 @@
 - **Cloud**: Docker 
 
 ##  App Overview and working
-> [Watch Web Demo (Download/View)](https://raw.githubusercontent.com/jatinnathh/NeuroFusion/main/static/assets/web_neuro%20(1).mp4)
+> [Watch Web Demo (Download/View)](https://github.com/user-attachments/assets/4dfeb53a-b648-4bef-9265-82cfb9ad1df7)
 
 > [Watch Mobile Demo (Download/View)](https://github.com/jatinnathh/NeuroFusion/blob/main/static/assets/mobile_neuro.mp4)
 
