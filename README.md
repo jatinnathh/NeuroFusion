@@ -48,6 +48,7 @@ Below are a few example outputs generated using the same prompt. Differences in 
 
 # Clone the repo
 git clone https://github.com/jatinnathh/NeuroFusion.git
+
 cd NeuroFusion
 
 # Start Expo frontend
