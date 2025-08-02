@@ -35,11 +35,16 @@
 <img src="https://github.com/user-attachments/assets/a680e117-b572-4b19-a17b-06da2ca6a1d0" width="300"/>
 
 
+Below are a few example outputs generated using the same prompt. Differences in images arise due to changes in hyperparameters.
+
+<img width="1204" height="621" alt="Image" src="https://github.com/user-attachments/assets/cb166f56-7206-4609-b21d-8ea10f5b8b96" />
+<img width="1199" height="612" alt="Image" src="https://github.com/user-attachments/assets/5c3ba0b9-5ddc-45d0-8b79-42e2beb60211" />
+
+
+
 
 
 ##  How to Run (Local Dev)
-
-bash
 # Clone the repo
 git clone https://github.com/jatinnathh/NeuroFusion.git
 cd NeuroFusion
