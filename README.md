@@ -31,6 +31,10 @@
 
 
 
+
+
+
+
 **Below are a few example outputs generated using the same prompt. Differences in images arise due to changes in hyperparameters.**
 
 <img width="1204" height="621" alt="Image" src="https://github.com/user-attachments/assets/cb166f56-7206-4609-b21d-8ea10f5b8b96" />
