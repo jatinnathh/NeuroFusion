@@ -23,7 +23,7 @@
 ##  App Overview and working
 > [Watch Web Demo (Download/View)](https://github.com/user-attachments/assets/4dfeb53a-b648-4bef-9265-82cfb9ad1df7)
 
-> [Watch Mobile Demo (Download/View)](https://github.com/jatinnathh/NeuroFusion/blob/main/static/assets/mobile_neuro.mp4)
+> [Watch Mobile Demo (Download/View)](https://github.com/user-attachments/assets/e8cfd03a-a0ef-413e-98a9-2ec217bc2880)
 
 ##  Example Generations
 <img src="https://github.com/user-attachments/assets/2e664f49-05cb-4172-b9db-70ffc4fe66d6" width="300"/>
