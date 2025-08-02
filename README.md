@@ -38,22 +38,24 @@
 Below are a few example outputs generated using the same prompt. Differences in images arise due to changes in hyperparameters.
 
 <img width="1204" height="621" alt="Image" src="https://github.com/user-attachments/assets/cb166f56-7206-4609-b21d-8ea10f5b8b96" />
+
+
 <img width="1199" height="612" alt="Image" src="https://github.com/user-attachments/assets/5c3ba0b9-5ddc-45d0-8b79-42e2beb60211" />
 
 
 
 
 
-##  How to Run (Local Dev)
 # Clone the repo
 git clone https://github.com/jatinnathh/NeuroFusion.git
 cd NeuroFusion
 
 # Start Expo frontend
 python update_ip.py
-netsh advfirewall firewall add rule name="Allow Port 8000" dir=in action=allow protocol=TCP localport=8000
-docker compose up --build
 
+netsh advfirewall firewall add rule name="Allow Port 8000" dir=in action=allow protocol=TCP localport=8000
+
+docker compose up --build
 
 
 ## Reference papers
