@@ -389,19 +389,22 @@ async def process_queue():
             n_inference_steps = 100 if has_input_image else 60
 
             # ── Call HuggingFace Space for image generation ────────────────
+            payload = {
+                "prompt":          job["prompt"],
+                "negative_prompt": job["negative_prompt"] or "",
+                "strength":        0.6 if has_input_image else 1.0,
+                "cfg_scale":       10.0,
+                "steps":           n_inference_steps,
+                "seed":            42,
+            }
+            if job["input_image"]:
+                payload["input_image"] = job["input_image"]
+
             print(f"[backend] Sending job {queue_id} to HF Space ...")
             async with httpx.AsyncClient(timeout=600) as client:  # 10 min timeout
                 hf_response = await client.post(
                     f"{HF_SPACE_URL}/generate",
-                    json={
-                        "prompt":          job["prompt"],
-                        "negative_prompt": job["negative_prompt"] or "",
-                        "input_image":     job["input_image"],
-                        "strength":        0.6 if has_input_image else 1.0,
-                        "cfg_scale":       10.0,
-                        "steps":           n_inference_steps,
-                        "seed":            42,
-                    }
+                    json=payload
                 )
             hf_response.raise_for_status()
             b64_image = hf_response.json()["image"]   # base64 PNG from HF Space
