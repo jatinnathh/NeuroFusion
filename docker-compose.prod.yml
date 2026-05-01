@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+
+  # ── MySQL Database ────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Jatin11
+      MYSQL_DATABASE: stable
+      MYSQL_USER: neurofusion
+      MYSQL_PASSWORD: Jatin@1234
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "neurofusion", "-pJatin@1234"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  # ── FastAPI Backend ────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: always
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: neurofusion
+      DB_PASSWORD: Jatin@1234
+      DB_NAME: stable
+      HF_SPACE_URL: https://jatinnath-neurofusion.hf.space
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - saved_images:/app/saved_images
+
+  # ── Expo Web Frontend (served via nginx) ───────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  saved_images:
