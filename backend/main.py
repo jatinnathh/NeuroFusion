@@ -17,11 +17,19 @@ from time import time
 import numpy as np
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env — tries backend/.env first, then .env in current dir
+_here = Path(__file__).resolve().parent
+load_dotenv(_here / ".env")        # backend/.env  ← primary
+load_dotenv(_here.parent / ".env") # root .env     ← fallback
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # ── HuggingFace Space inference endpoint ─────────────────────────────────────
-# Set HF_SPACE_URL in your .env / EC2 environment variables
+# Set HF_SPACE_URL in your backend/.env file
 HF_SPACE_URL = os.getenv("HF_SPACE_URL", "https://jatinnath-neurofusion.hf.space")
+
 
 MAX_QUEUE_SIZE = 5
 processing_queue = deque()
