@@ -16,3 +16,9 @@ NeuroFusion/
 
 *.ckpt
 backend/data/*.ckpt
+
+backend/saved_images/
+saved_images/
+backend/data/
+backend/sd/.ipynb_checkpoints/
+*.ipynb
