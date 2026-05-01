@@ -349,6 +349,7 @@ async def enqueue_generation(request: Request):
     cursor.close()
     db.close()
 
+
     async with queue_lock:
         if len(processing_queue) >= MAX_QUEUE_SIZE:
             return {"message": "Queue is full. Please wait and try again.", "queue_full": True}
@@ -401,13 +402,29 @@ async def process_queue():
                 payload["input_image"] = job["input_image"]
 
             print(f"[backend] Sending job {queue_id} to HF Space ...")
-            async with httpx.AsyncClient(timeout=600) as client:  # 10 min timeout
+            async with httpx.AsyncClient(timeout=30) as client:
                 hf_response = await client.post(
                     f"{HF_SPACE_URL}/generate",
                     json=payload
                 )
-            hf_response.raise_for_status()
-            b64_image = hf_response.json()["image"]   # base64 PNG from HF Space
+                hf_response.raise_for_status()
+                job_id = hf_response.json()["job_id"]
+                
+                print(f"[backend] Job {queue_id} accepted by HF Space as {job_id}. Polling for completion...")
+                b64_image = None
+                while True:
+                    await asyncio.sleep(5)  # poll every 5 seconds
+                    res = await client.get(f"{HF_SPACE_URL}/result/{job_id}")
+                    res.raise_for_status()
+                    data = res.json()
+                    
+                    if data["status"] == "done":
+                        b64_image = data["image"]
+                        break
+                    elif data["status"] == "failed":
+                        raise Exception(f"HF Space error: {data['error']}")
+                    # if "processing", continue loop
+                
             print(f"[backend] Job {queue_id} received image from HF Space ✓")
 
             # Decode base64 → PIL Image
@@ -426,7 +443,9 @@ async def process_queue():
             db.commit()
 
         except Exception as e:
-            print("[ERROR] Job failed:", e)
+            import traceback
+            print("[ERROR] Job failed:", repr(e))
+            traceback.print_exc()
             cursor.execute("UPDATE generation_queue SET status='failed' WHERE id=%s", (queue_id,))
             db.commit()
         finally:
