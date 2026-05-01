@@ -11,8 +11,8 @@ RUN npm install --legacy-peer-deps
 
 COPY app.json babel.config.js tsconfig.json index.js ./
 COPY screens/ ./screens/
-COPY assets/ ./assets/
 COPY App.js ./
+
 
 # Build Expo web output → /app/dist
 RUN npx expo export --platform web --output-dir dist
