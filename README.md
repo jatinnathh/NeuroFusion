@@ -1,0 +1,673 @@
+# NeuroFusion — AI Image Generator
+
+> A full-stack mobile application that brings **Stable Diffusion** image generation to your pocket. Built with **React Native (Expo)** on the frontend and **FastAPI** on the backend, NeuroFusion lets users generate stunning AI images from text prompts, enhance existing images with img2img, track generation progress in real-time, and manage their personal gallery — all from a sleek, dark-themed mobile interface.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [System Architecture](#system-architecture)
+- [AI Pipeline: Stable Diffusion Deep Dive](#ai-pipeline-stable-diffusion-deep-dive)
+- [Database Schema](#database-schema)
+- [API Reference](#api-reference)
+- [Project Structure](#project-structure)
+- [Screens & Features](#screens--features)
+- [Tech Stack](#tech-stack)
+- [Environment Variables](#environment-variables)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Local Development (Manual)](#local-development-manual)
+  - [Docker Deployment](#docker-deployment)
+- [Configuration](#configuration)
+- [Queue System](#queue-system)
+- [Admin Dashboard](#admin-dashboard)
+- [Known Limitations](#known-limitations)
+- [License](#license)
+
+---
+
+## Overview
+
+NeuroFusion is an end-to-end AI image generation platform built on top of a **from-scratch implementation of Stable Diffusion v1.5**. Unlike wrappers around HuggingFace's `diffusers`, the SD pipeline here is implemented component-by-component — CLIP encoder, VAE encoder/decoder, UNet diffusion model, and the DDPM sampler — giving full control over the inference loop, including custom cancellation callbacks and per-step progress reporting.
+
+**Key highlights:**
+- 🎨 **Text-to-Image** — Generate images from any text prompt
+- 🖼️ **Image-to-Image (img2img)** — Upload a reference image and let the AI transform or enhance it
+- ⚡ **Async Queue System** — Requests are queued and processed one-at-a-time to avoid GPU/CPU contention, with a max queue depth of 5
+- 📊 **Real-time Progress** — Live diffusion step progress (percentage + ETA) streamed to the mobile client via polling
+- 🔄 **Job Cancellation** — Cancel an in-progress generation mid-diffusion
+- 🗂️ **Personal Gallery** — Every completed image is saved and accessible per-user
+- 🛡️ **Admin Dashboard** — Full user and image management for admins
+- 🐳 **Docker-ready** — One-command deployment with Docker Compose
+
+---
+
+## System Architecture
+
+```
+┌─────────────────┐    HTTP/REST API    ┌─────────────────┐
+│   React Native  │◄──────────────────►│   FastAPI       │
+│   Frontend      │                     │   Backend       │
+│                 │                     │                 │
+│ • Navigation    │                     │ • Queue System  │
+│ • UI Components │                     │ • AI Pipeline   │
+│ • State Mgmt    │                     │ • User Auth     │
+└─────────────────┘                     └─────────────────┘
+                                                   │
+                                                   ▼
+                              ┌─────────────────────────────────┐
+                              │       Stable Diffusion          │
+                              │                                 │
+                              │ ┌─────────┐ ┌─────────┐        │
+                              │ │  CLIP   │ │   VAE   │        │
+                              │ │ Encoder │ │ Encoder │        │
+                              │ └─────────┘ └─────────┘        │
+                              │           │                     │
+                              │     ┌─────▼─────┐              │
+                              │     │   UNet    │              │
+                              │     │ Diffusion │              │
+                              │     └─────┬─────┘              │
+                              │           │                     │
+                              │     ┌─────▼─────┐              │
+                              │     │    VAE    │              │
+                              │     │  Decoder  │              │
+                              │     └───────────┘              │
+                              └─────────────────────────────────┘
+                                                   │
+                                                   ▼
+                                        ┌─────────────────┐
+                                        │     MySQL       │
+                                        │   Database      │
+                                        │                 │
+                                        │ • Users         │
+                                        │ • Images        │
+                                        │ • Queue         │
+                                        └─────────────────┘
+```
+
+### Component Responsibilities
+
+| Component | Technology | Responsibility |
+|-----------|-----------|----------------|
+| **Mobile App** | React Native + Expo | UI, navigation, prompt input, gallery, progress polling |
+| **API Server** | FastAPI + Uvicorn | REST endpoints, async queue management, auth, file serving |
+| **SD Pipeline** | PyTorch (custom) | CLIP encoding → VAE encode → UNet diffusion → VAE decode |
+| **Database** | MySQL 8 | Persist users, generated images, and queue state |
+| **Static Files** | FastAPI `StaticFiles` | Serve generated PNG images over HTTP |
+
+---
+
+## AI Pipeline: Stable Diffusion Deep Dive
+
+The entire Stable Diffusion v1.5 inference pipeline is implemented from scratch under `backend/sd/`. No `diffusers` library is used — every tensor operation is explicit.
+
+```
+Prompt Text
+    │
+    ▼
+┌──────────────────────────────────────────────────────────┐
+│  CLIP Tokenizer  (backend/data/vocab.json + merges.txt)  │
+│  Converts text → token IDs (max 77 tokens)               │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+                        ▼
+┌──────────────────────────────────────────────────────────┐
+│  CLIP Text Encoder  (backend/sd/clip.py)                 │
+│  Token IDs → Context Embeddings (768-dim)                │
+│  Used for both conditional (prompt) and                   │
+│  unconditional (negative prompt) embeddings              │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+          ┌─────────────▼─────────────┐
+          │  CFG: Classifier-Free     │
+          │  Guidance Scale = 10      │
+          │  ε = ε_uncond + scale *   │
+          │      (ε_cond - ε_uncond)  │
+          └─────────────┬─────────────┘
+                        │
+┌───────────────────────▼──────────────────────────────────┐
+│  VAE Encoder  (backend/sd/encoder.py)  [img2img only]    │
+│  Input Image (512×512 RGB)  →  Latent Space (64×64×4)   │
+│  Adds noise at strength t ∈ [0,1] (default: 0.6)        │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+┌───────────────────────▼──────────────────────────────────┐
+│  UNet  (backend/sd/diffusion.py)                         │
+│  Iterative denoising via DDPM scheduler                  │
+│                                                          │
+│  text2img: 60 denoising steps                            │
+│  img2img:  100 denoising steps (higher fidelity)         │
+│                                                          │
+│  At each step:                                           │
+│    1. UNet predicts noise residual                       │
+│    2. Apply CFG guidance                                 │
+│    3. DDPM scheduler removes predicted noise             │
+│    4. Progress callback fires → percent + ETA update     │
+│    5. Check cancel flag → abort if requested             │
+└───────────────────────┬──────────────────────────────────┘
+                        │
+┌───────────────────────▼──────────────────────────────────┐
+│  VAE Decoder  (backend/sd/decoder.py)                    │
+│  Denoised Latents (64×64×4) → Pixel Image (512×512 RGB)  │
+│  Saves as PNG to ./saved_images/                         │
+└──────────────────────────────────────────────────────────┘
+```
+
+### SD Module Files
+
+| File | Description |
+|------|-------------|
+| `backend/sd/pipeline.py` | Main `generate()` function — orchestrates the full inference loop |
+| `backend/sd/clip.py` | CLIP text encoder — transforms token embeddings into context vectors |
+| `backend/sd/encoder.py` | VAE encoder — encodes pixel images into the 4-channel latent space |
+| `backend/sd/decoder.py` | VAE decoder — maps latent vectors back to pixel space |
+| `backend/sd/diffusion.py` | UNet architecture — backbone of the denoising process |
+| `backend/sd/ddpm.py` | DDPM sampler — manages the noise schedule and step updates |
+| `backend/sd/attention.py` | Self-attention and cross-attention layers used by UNet |
+| `backend/sd/model_loader.py` | Loads all model weights from the `.ckpt` checkpoint file |
+| `backend/sd/model_converter.py` | Converts HuggingFace/CompVis weight keys to match custom architecture |
+
+### Model Weights
+
+The pipeline loads weights from:
+```
+backend/data/v1-5-pruned-emaonly.ckpt
+```
+
+> This is the official Stable Diffusion v1.5 EMA-only checkpoint from RunwayML (~4 GB). It must be downloaded separately and placed at the above path.
+
+**Download:** [Hugging Face — runwayml/stable-diffusion-v1-5](https://huggingface.co/runwayml/stable-diffusion-v1-5/blob/main/v1-5-pruned-emaonly.ckpt)
+
+---
+
+## Database Schema
+
+Three tables are auto-created on startup via `create_tables()`:
+
+```sql
+-- User accounts
+CREATE TABLE users (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    username    VARCHAR(255),
+    email       VARCHAR(255) NOT NULL UNIQUE,
+    password    VARCHAR(255) NOT NULL,
+    role        ENUM('user', 'admin') DEFAULT 'user',
+    created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Completed image records
+CREATE TABLE images_generated (
+    id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id     INT,
+    prompt      TEXT NOT NULL,
+    image_url   TEXT NOT NULL,          -- filename in saved_images/
+    timestamp   DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Generation queue (pending, in-progress, done, failed)
+CREATE TABLE generation_queue (
+    id              INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT NOT NULL,
+    prompt          TEXT,
+    negative_prompt TEXT,
+    input_image     LONGBLOB,           -- base64-encoded input for img2img
+    status          ENUM('queued','processing','done','failed') DEFAULT 'queued',
+    result_url      TEXT,               -- filename once generation completes
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+```
+
+**ER Diagram:**
+
+```
+┌──────────┐         ┌───────────────────┐        ┌──────────────────┐
+│  users   │  1───N  │  images_generated │        │ generation_queue │
+│──────────│         │───────────────────│        │──────────────────│
+│ id (PK)  │◄────────│ user_id (FK)      │   1──N │ user_id (FK)     │◄──
+│ username │         │ prompt            │        │ prompt           │
+│ email    │         │ image_url         │        │ negative_prompt  │
+│ password │         │ timestamp         │        │ input_image      │
+│ role     │         └───────────────────┘        │ status           │
+│created_at│◄────────────────────────────────────│ result_url       │
+└──────────┘                                      └──────────────────┘
+```
+
+---
+
+## API Reference
+
+**Base URL:** `http://<SERVER_IP>:8000`
+
+### Authentication
+
+| Method | Endpoint | Description | Request Body |
+|--------|----------|-------------|--------------|
+| `POST` | `/register` | Register a new user | `{ username, email, password, role? }` |
+| `POST` | `/login` | Login with email/username + password | `{ email, password }` |
+
+### User
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/user-info/{user_id}` | Get user profile + total image count |
+| `GET` | `/user-images/{user_id}` | List all generated images for a user |
+| `GET` | `/users` | List all users (admin) |
+| `DELETE` | `/users/{user_id}` | Delete user + all their images and queue entries |
+
+### Image Generation Queue
+
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| `POST` | `/queue` | Enqueue a new generation job | `{ user_id, prompt, uncond_prompt?, input_image? }` |
+| `GET` | `/user-queue/{user_id}` | Get all queue items for a user |
+| `GET` | `/progress/{queue_id}` | Get real-time progress `{ percent, eta, time_taken }` |
+| `POST` | `/cancel/{queue_id}` | Request cancellation of an active job |
+| `DELETE` | `/clear-queue/{user_id}` | Clear all queue entries for a user |
+
+### Images
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `DELETE` | `/images/{image_id}` | Delete a generated image record |
+| `GET` | `/saved_images/{filename}` | Serve a generated image file (static) |
+
+### Health
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/ping` | Health check — returns `{ "status": "ok" }` |
+
+---
+
+## Project Structure
+
+```
+expo_img-v2/
+│
+├── App.js                          # Root navigator — Stack + Tab navigation
+├── index.js                        # Expo entry point
+├── app.json                        # Expo project config
+├── package.json                    # Node.js dependencies
+├── babel.config.js                 # Babel transpiler config
+├── tsconfig.json                   # TypeScript config
+│
+├── screens/                        # React Native screens
+│   ├── login.jsx                   # Login screen
+│   ├── signup.jsx                  # Registration screen
+│   ├── generate.jsx                # Prompt input + img2img upload
+│   ├── gallery.jsx                 # Personal image gallery
+│   ├── account.jsx                 # User profile & stats
+│   ├── MyQueue.jsx                 # Real-time queue monitor & history
+│   ├── AdminDashboard.jsx          # Admin: manage users & images
+│   └── ip.json                     # Backend IP config (auto-generated)
+│
+├── assets/                         # Images, fonts, icons
+│
+├── backend/
+│   ├── main.py                     # FastAPI application + all endpoints
+│   ├── requirements.txt            # Python dependencies
+│   ├── ip.json                     # Backend self-reference IP
+│   │
+│   ├── sd/                         # Stable Diffusion pipeline (custom PyTorch)
+│   │   ├── pipeline.py             # Main generate() orchestrator
+│   │   ├── clip.py                 # CLIP text encoder
+│   │   ├── encoder.py              # VAE encoder (image → latent)
+│   │   ├── decoder.py              # VAE decoder (latent → image)
+│   │   ├── diffusion.py            # UNet denoising network
+│   │   ├── ddpm.py                 # DDPM noise scheduler
+│   │   ├── attention.py            # Self & cross-attention modules
+│   │   ├── model_loader.py         # Checkpoint weight loader
+│   │   └── model_converter.py      # Weight key conversion utility
+│   │
+│   └── data/                       # Model data files (not committed)
+│       ├── v1-5-pruned-emaonly.ckpt  # SD v1.5 weights (~4 GB)
+│       ├── vocab.json              # CLIP tokenizer vocabulary
+│       └── merges.txt              # CLIP tokenizer BPE merges
+│
+├── saved_images/                   # Generated PNG output files
+│
+├── Dockerfile                      # Docker image build instructions
+├── docker-compose.yml              # Local dev: backend + MySQL
+├── docker-compose.prod.yml         # Production compose config
+├── .dockerignore                   # Docker build exclusions
+├── start.sh                        # Container entrypoint (FastAPI + Expo)
+├── nginx.conf                      # Nginx reverse proxy config
+├── deploy.sh                       # Deployment automation script
+│
+├── update_ip.py                    # Auto-detect and write host IP to ip.json
+└── write_ip.py                     # Manual IP writer utility
+```
+
+---
+
+## Screens & Features
+
+### Navigation Flow
+
+```
+                    ┌──────────┐
+                    │  Login   │
+                    └────┬─────┘
+            ┌────────────┼────────────┐
+            ▼            ▼            ▼
+        ┌────────┐  ┌────────┐  ┌─────────┐
+        │ Signup │  │  Main  │  │  Admin  │
+        └────────┘  │  Tabs  │  │Dashboard│
+                    └───┬────┘  └─────────┘
+              ┌─────────┼──────────┐
+              ▼         ▼          ▼
+          ┌────────┐ ┌───────┐ ┌─────────┐
+          │Generate│ │Gallery│ │ Account │
+          └───┬────┘ └───────┘ └─────────┘
+              │
+              ▼
+          ┌─────────┐
+          │ MyQueue │
+          └─────────┘
+```
+
+### Screen Descriptions
+
+| Screen | File | Key Features |
+|--------|------|-------------|
+| **Login** | `login.jsx` | Email/password login, admin role redirect, dark glassmorphism UI |
+| **Signup** | `signup.jsx` | User registration with validation |
+| **Generate** | `generate.jsx` | Prompt + negative prompt input, image picker for img2img, queue submission, "See Progress →" link |
+| **Gallery** | `gallery.jsx` | Grid view of all user-generated images, tap to enlarge |
+| **Account** | `account.jsx` | Username, email, join date, total images generated |
+| **My Queue** | `MyQueue.jsx` | Live queue status (QUEUED / PROCESSING / DONE / FAILED / CANCELLED), animated progress bar, ETA countdown, cancel/remove actions, pull-to-refresh, clear all |
+| **Admin Dashboard** | `AdminDashboard.jsx` | List all users, drill into any user to see their profile + all generated images, delete users or individual images |
+
+---
+
+## Tech Stack
+
+### Frontend
+
+| Library | Version | Purpose |
+|---------|---------|---------|
+| React Native | 0.79.4 | Cross-platform mobile framework |
+| Expo | 53.0.13 | Toolchain, native module access |
+| React Navigation | 7.x | Stack + Tab navigation |
+| expo-image-picker | ~16.1.4 | Camera roll access for img2img |
+| expo-linear-gradient | ~14.1.5 | UI gradient backgrounds |
+| expo-file-system | ^18.1.10 | Local file operations |
+| Axios | ^1.10.0 | HTTP client |
+| Ionicons | (via Expo) | Icon set |
+
+### Backend
+
+| Library | Version | Purpose |
+|---------|---------|---------|
+| FastAPI | latest | Async REST API framework |
+| Uvicorn | latest | ASGI server |
+| PyTorch | 2.5.1 | Deep learning tensor operations |
+| Torchvision | 0.20.1 | Image transforms |
+| Transformers | 4.33.2 | CLIP tokenizer |
+| Pillow | latest | Image I/O and processing |
+| mysql-connector-python | latest | MySQL database driver |
+| python-dotenv | latest | Environment variable loading |
+| aiohttp / aiofiles | latest | Async HTTP + file operations |
+
+### Infrastructure
+
+| Tool | Purpose |
+|------|---------|
+| MySQL 8 | Primary relational database |
+| Docker + Docker Compose | Containerised deployment |
+| Nginx | Reverse proxy (production) |
+| Expo Tunnel (ngrok) | Expose Expo dev server over the internet |
+
+---
+
+## Environment Variables
+
+Configure these either in a `.env` file or in `docker-compose.yml`:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DB_HOST` | `localhost` | MySQL host |
+| `DB_PORT` | `3306` | MySQL port |
+| `DB_USER` | `root` | MySQL username |
+| `DB_PASSWORD` | ` ` | MySQL password |
+| `DB_NAME` | `stable` | MySQL database name |
+
+In Docker, these are set via the `environment` block in `docker-compose.yml` and automatically point `DB_HOST` to the `mysql` service container.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+| Requirement | Version |
+|------------|---------|
+| Python | 3.11+ |
+| Node.js | 18+ |
+| npm | 9+ |
+| MySQL | 8.0+ (or Docker) |
+| Expo CLI | latest (`npm install -g expo`) |
+| Stable Diffusion Weights | `v1-5-pruned-emaonly.ckpt` (downloaded separately) |
+
+> **Hardware Note:** The SD pipeline runs on CPU by default (`DEVICE = "cpu"`). Generation takes **5–20 minutes per image** on a modern CPU. A CUDA-capable GPU is strongly recommended for production use; simply change `DEVICE = "cuda"` in `backend/main.py`.
+
+---
+
+### Local Development (Manual)
+
+#### 1. Clone & Install Frontend
+
+```bash
+git clone <repo-url>
+cd expo_img-v2
+npm install
+```
+
+#### 2. Install Backend Dependencies
+
+```bash
+cd backend
+pip install -r requirements.txt
+cd ..
+```
+
+#### 3. Download Model Weights
+
+Download `v1-5-pruned-emaonly.ckpt` from Hugging Face and place it at:
+```
+backend/data/v1-5-pruned-emaonly.ckpt
+```
+
+Also ensure `vocab.json` and `merges.txt` exist in `backend/data/`.
+
+#### 4. Set Up MySQL
+
+```sql
+CREATE DATABASE stable;
+```
+Tables are auto-created on first startup.
+
+#### 5. Configure IP
+
+Edit `screens/ip.json` and `backend/ip.json` with your machine's local IP:
+```json
+{ "ip": "192.168.1.XXX" }
+```
+
+Or run the auto-detect script:
+```bash
+python update_ip.py
+```
+
+#### 6. Start the Backend
+
+```bash
+uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+#### 7. Start the Expo App
+
+```bash
+npx expo start
+```
+
+Scan the QR code with **Expo Go** (Android/iOS) or press `w` for web.
+
+---
+
+### Docker Deployment
+
+The Docker setup runs both the FastAPI backend and Expo together in a single container, with MySQL as a sidecar.
+
+#### 1. Update IP Before Building
+
+```bash
+python update_ip.py   # Writes your host IP to ip.json files
+```
+
+#### 2. Build and Start
+
+```bash
+docker-compose up --build
+```
+
+This starts:
+- **backend** container on ports `8000` (FastAPI) and `8081` (Expo)
+- **mysql** container on host port `3307` → container port `3306`
+
+#### 3. Access
+
+| Service | URL |
+|---------|-----|
+| FastAPI API | `http://localhost:8000` |
+| FastAPI Docs | `http://localhost:8000/docs` |
+| Expo Dev Server | `http://localhost:8081` |
+| MySQL | `localhost:3307` |
+
+#### Exposed Ports (Dockerfile)
+
+| Port | Service |
+|------|---------|
+| `8000` | FastAPI REST API |
+| `19000` | Expo Metro bundler |
+| `19001` | Expo DevTools |
+| `19002` | Expo web interface |
+| `19006` | Expo web app |
+
+---
+
+## Configuration
+
+### Changing the Inference Device
+
+In `backend/main.py`, line 119:
+
+```python
+# CPU (default — slow but universal)
+DEVICE = "cpu"
+
+# GPU (recommended for production)
+DEVICE = "cuda"
+```
+
+### Generation Parameters
+
+These are set in the queue processor (`process_queue()` in `main.py`):
+
+| Parameter | text2img | img2img | Description |
+|-----------|----------|---------|-------------|
+| `n_inference_steps` | 60 | 100 | Number of denoising steps |
+| `cfg_scale` | 10 | 10 | Classifier-free guidance strength |
+| `strength` | 1.0 | 0.6 | img2img noise strength (0=no change, 1=full generation) |
+| `sampler_name` | `ddpm` | `ddpm` | Noise scheduler algorithm |
+| `seed` | 42 | 42 | Random seed (fixed for reproducibility) |
+
+### Queue Size
+
+```python
+MAX_QUEUE_SIZE = 5   # Maximum pending jobs in memory queue
+```
+
+---
+
+## Queue System
+
+The queue is a two-layer system:
+
+```
+User submits prompt
+        │
+        ▼
+  ┌─────────────────────────────────┐
+  │   MySQL generation_queue table  │  ← Persistent storage (survives restarts)
+  │   status: 'queued'              │
+  └──────────────┬──────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────┐
+  │   In-memory deque (Python)      │  ← Active processing queue (max 5 items)
+  │   processing_queue              │
+  └──────────────┬──────────────────┘
+                 │
+                 ▼
+  ┌─────────────────────────────────┐
+  │   process_queue() async loop    │  ← Single worker, sequential processing
+  │   Runs in background task       │
+  └──────────────┬──────────────────┘
+                 │
+         ┌───────┴────────┐
+         ▼                ▼
+   Job succeeds      Job cancelled/fails
+         │                │
+  status='done'    status='failed'/'cancelled'
+  result_url set   
+  images_generated row inserted
+```
+
+**Why sequential processing?** Stable Diffusion requires significant RAM/VRAM. Running jobs in parallel would cause OOM errors on typical hardware. The single-worker approach ensures each generation gets full resources.
+
+---
+
+## Admin Dashboard
+
+Admins (role = `'admin'`) are redirected to the Admin Dashboard after login instead of the main app.
+
+**Capabilities:**
+- **View all users** — list with username, expandable details
+- **Drill into any user** — see email, join date, total images, and full image history
+- **Delete users** — cascades to delete all their images and queue entries
+- **Delete individual images** — removes the record (file cleanup to be implemented)
+
+The default admin account is seeded on first startup:
+- Email: `jatin123@gmail.com`
+- Password: `jatin123`
+
+> ⚠️ Change the default admin credentials before any production deployment.
+
+---
+
+## Known Limitations
+
+| Limitation | Details |
+|-----------|---------|
+| **CPU-only by default** | Generation takes 5–20 min per image. Change to `DEVICE = "cuda"` for GPU. |
+| **Passwords stored in plaintext** | The codebase stores passwords without hashing. Add `bcrypt` hashing before production use. |
+| **No JWT authentication** | API endpoints are not token-protected. All `/users` and admin routes are publicly accessible. |
+| **Fixed seed** | Seed is hardcoded to `42`. Uncomment the `random.randint` line in `main.py` for varied outputs. |
+| **No file cleanup on image delete** | Deleting an image record does not remove the PNG file from `saved_images/`. |
+| **Queue not persistent across restarts** | The in-memory deque is cleared on restart. Jobs in MySQL with `queued` status will never be processed unless re-submitted. |
+| **CORS fully open** | `allow_origins=["*"]` — restrict to specific origins for production. |
+
+---
+
+## License
+
+This project is for educational and personal use. The Stable Diffusion v1.5 model weights are subject to the [CreativeML Open RAIL-M License](https://huggingface.co/spaces/CompVis/stable-diffusion-license).
+
+---
+
+<div align="center">
+  <strong>Built with ❤️ using React Native, FastAPI, and Stable Diffusion</strong>
+</div>

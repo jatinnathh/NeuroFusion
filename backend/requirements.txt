@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+pydantic
+pillow
+httpx
+mysql-connector-python
+aiofiles
+python-dotenv
+python-multipart
+pydantic-settings
+numpy

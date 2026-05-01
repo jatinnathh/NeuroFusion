@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pillow
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
+transformers==4.33.2
+tokenizers==0.13.3
+tqdm
+python-multipart
