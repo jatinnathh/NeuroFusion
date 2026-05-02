@@ -2,7 +2,35 @@
 
 > A full-stack mobile and web application that brings **Stable Diffusion** image generation to your pocket. Built with **React Native (Expo)** on the frontend and **FastAPI** on the backend, NeuroFusion lets users generate stunning AI images from text prompts, enhance existing images with img2img, track generation progress in real-time, and manage their personal gallery — all from a sleek, dark-themed interface.
 
-> Developed during an internship at **Innova Solutions**.
+## Example Generations
+
+<img src="https://github.com/user-attachments/assets/2e664f49-05cb-4172-b9db-70ffc4fe66d6" width="300"/>
+<img src="https://github.com/user-attachments/assets/0339625d-03d0-404d-88dd-bc9b2415ef08" width="300"/>
+<img src="https://github.com/user-attachments/assets/f594154f-392d-4d43-ac78-f283a5302f59" width="300"/>
+<img src="https://github.com/user-attachments/assets/e4f48635-e39e-4bfd-9c3d-4642794b3c49" width="300"/>
+<img src="https://github.com/user-attachments/assets/b56904ef-b78c-46e6-855e-c541019a423a" width="300"/>
+<img src="https://github.com/user-attachments/assets/a680e117-b572-4b19-a17b-06da2ca6a1d0" width="300"/>
+<img width="300" src="https://github.com/user-attachments/assets/5b7fffe6-47e3-4b24-a23a-c5a38b8df95a" />
+<img width="300" src="https://github.com/user-attachments/assets/371b339e-6da6-49fa-87f6-28d376f09052" />
+<img width="300"  src="https://github.com/user-attachments/assets/b5cce8cc-3c11-4706-a430-b184105a85de" />
+<br/><br/>
+
+### Hyperparameter Comparison
+
+Below are example outputs generated using the same prompt. Differences in images arise due to changes in hyperparameters such as CFG scale, inference steps, and seed.
+
+<img width="1204" height="621" alt="Hyperparameter comparison 1" src="https://github.com/user-attachments/assets/cb166f56-7206-4609-b21d-8ea10f5b8b96" />
+
+<img width="1199" height="612" alt="Hyperparameter comparison 2" src="https://github.com/user-attachments/assets/5c3ba0b9-5ddc-45d0-8b79-42e2beb60211" />
+
+---
+
+## App Overview and Working
+
+- [Watch Web Demo (Download/View)](https://github.com/user-attachments/assets/4dfeb53a-b648-4bef-9265-82cfb9ad1df7)
+- [Watch Mobile Demo (Download/View)](https://github.com/user-attachments/assets/e8cfd03a-a0ef-413e-98a9-2ec217bc2880)
+
+---
 
 ---
 
@@ -387,33 +415,7 @@ expo_img-v2/
 
 ---
 
-## Example Generations
 
-<img src="https://github.com/user-attachments/assets/2e664f49-05cb-4172-b9db-70ffc4fe66d6" width="300"/>
-<img src="https://github.com/user-attachments/assets/0339625d-03d0-404d-88dd-bc9b2415ef08" width="300"/>
-<img src="https://github.com/user-attachments/assets/f594154f-392d-4d43-ac78-f283a5302f59" width="300"/>
-<img src="https://github.com/user-attachments/assets/e4f48635-e39e-4bfd-9c3d-4642794b3c49" width="300"/>
-<img src="https://github.com/user-attachments/assets/b56904ef-b78c-46e6-855e-c541019a423a" width="300"/>
-<img src="https://github.com/user-attachments/assets/a680e117-b572-4b19-a17b-06da2ca6a1d0" width="300"/>
-
-<br/><br/>
-
-### Hyperparameter Comparison
-
-Below are example outputs generated using the same prompt. Differences in images arise due to changes in hyperparameters such as CFG scale, inference steps, and seed.
-
-<img width="1204" height="621" alt="Hyperparameter comparison 1" src="https://github.com/user-attachments/assets/cb166f56-7206-4609-b21d-8ea10f5b8b96" />
-
-<img width="1199" height="612" alt="Hyperparameter comparison 2" src="https://github.com/user-attachments/assets/5c3ba0b9-5ddc-45d0-8b79-42e2beb60211" />
-
----
-
-## App Overview and Working
-
-- [Watch Web Demo (Download/View)](https://github.com/user-attachments/assets/4dfeb53a-b648-4bef-9265-82cfb9ad1df7)
-- [Watch Mobile Demo (Download/View)](https://github.com/user-attachments/assets/e8cfd03a-a0ef-413e-98a9-2ec217bc2880)
-
----
 
 ## Tech Stack
 
@@ -487,129 +489,6 @@ In Docker, these are set via the `environment` block in `docker-compose.yml` and
 > **Hardware Note:** The SD pipeline runs on CPU by default (`DEVICE = "cpu"`). Generation takes **5–20 minutes per image** on a modern CPU. A CUDA-capable GPU is strongly recommended for production use; simply change `DEVICE = "cuda"` in `backend/main.py`.
 
 ---
-
-### Local Development (Manual)
-
-#### 1. Clone & Install Frontend
-
-```bash
-git clone https://github.com/jatinnathh/NeuroFusion.git
-cd NeuroFusion
-npm install
-```
-
-#### 2. Install Backend Dependencies
-
-```bash
-cd backend
-pip install -r requirements.txt
-cd ..
-```
-
-#### 3. Download Model Weights
-
-Download `v1-5-pruned-emaonly.ckpt` from Hugging Face and place it at:
-```
-backend/data/v1-5-pruned-emaonly.ckpt
-```
-
-Also ensure `vocab.json` and `merges.txt` exist in `backend/data/`.
-
-#### 4. Set Up MySQL
-
-```sql
-CREATE DATABASE stable;
-```
-Tables are auto-created on first startup.
-
-#### 5. Configure IP
-
-Edit `screens/ip.json` and `backend/ip.json` with your machine's local IP:
-```json
-{ "ip": "192.168.1.XXX" }
-```
-
-Or run the auto-detect script:
-```bash
-python update_ip.py
-```
-
-#### 6. Start the Backend
-
-```bash
-uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-#### 7. Start the Expo App
-
-```bash
-npx expo start
-```
-
-Scan the QR code with **Expo Go** (Android/iOS) or press `w` for web.
-
----
-
-### Docker Deployment
-
-The Docker setup runs both the FastAPI backend and Expo together in a single container, with MySQL as a sidecar.
-
-#### 1. Update IP Before Building
-
-```bash
-python update_ip.py
-```
-
-#### 2. Allow Firewall (Windows)
-
-```bash
-netsh advfirewall firewall add rule name="Allow Port 8000" dir=in action=allow protocol=TCP localport=8000
-```
-
-#### 3. Build and Start
-
-```bash
-docker compose up --build
-```
-
-This starts:
-- **backend** container on ports `8000` (FastAPI) and `8081` (Expo)
-- **mysql** container on host port `3307` → container port `3306`
-
-#### 4. Access
-
-| Service | URL |
-|---------|-----|
-| FastAPI API | `http://localhost:8000` |
-| FastAPI Docs | `http://localhost:8000/docs` |
-| Expo Dev Server | `http://localhost:8081` |
-| MySQL | `localhost:3307` |
-
-#### Exposed Ports (Dockerfile)
-
-| Port | Service |
-|------|---------|
-| `8000` | FastAPI REST API |
-| `19000` | Expo Metro bundler |
-| `19001` | Expo DevTools |
-| `19002` | Expo web interface |
-| `19006` | Expo web app |
-
----
-
-## Configuration
-
-### Changing the Inference Device
-
-In `backend/main.py`, line 119:
-
-```python
-# CPU (default — slow but universal)
-DEVICE = "cpu"
-
-# GPU (recommended for production)
-DEVICE = "cuda"
-```
 
 ### Generation Parameters
 
