@@ -1,18 +1,23 @@
 # NeuroFusion — AI Image Generator
 
-> A full-stack mobile application that brings **Stable Diffusion** image generation to your pocket. Built with **React Native (Expo)** on the frontend and **FastAPI** on the backend, NeuroFusion lets users generate stunning AI images from text prompts, enhance existing images with img2img, track generation progress in real-time, and manage their personal gallery — all from a sleek, dark-themed mobile interface.
+> A full-stack mobile and web application that brings **Stable Diffusion** image generation to your pocket. Built with **React Native (Expo)** on the frontend and **FastAPI** on the backend, NeuroFusion lets users generate stunning AI images from text prompts, enhance existing images with img2img, track generation progress in real-time, and manage their personal gallery — all from a sleek, dark-themed interface.
+
+> Developed during an internship at **Innova Solutions**.
 
 ---
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Features](#features)
 - [System Architecture](#system-architecture)
 - [AI Pipeline: Stable Diffusion Deep Dive](#ai-pipeline-stable-diffusion-deep-dive)
 - [Database Schema](#database-schema)
 - [API Reference](#api-reference)
 - [Project Structure](#project-structure)
 - [Screens & Features](#screens--features)
+- [Example Generations](#example-generations)
+- [App Overview and Working](#app-overview-and-working)
 - [Tech Stack](#tech-stack)
 - [Environment Variables](#environment-variables)
 - [Getting Started](#getting-started)
@@ -23,6 +28,7 @@
 - [Queue System](#queue-system)
 - [Admin Dashboard](#admin-dashboard)
 - [Known Limitations](#known-limitations)
+- [Reference Papers](#reference-papers)
 - [License](#license)
 
 ---
@@ -31,15 +37,21 @@
 
 NeuroFusion is an end-to-end AI image generation platform built on top of a **from-scratch implementation of Stable Diffusion v1.5**. Unlike wrappers around HuggingFace's `diffusers`, the SD pipeline here is implemented component-by-component — CLIP encoder, VAE encoder/decoder, UNet diffusion model, and the DDPM sampler — giving full control over the inference loop, including custom cancellation callbacks and per-step progress reporting.
 
-**Key highlights:**
-- 🎨 **Text-to-Image** — Generate images from any text prompt
-- 🖼️ **Image-to-Image (img2img)** — Upload a reference image and let the AI transform or enhance it
-- ⚡ **Async Queue System** — Requests are queued and processed one-at-a-time to avoid GPU/CPU contention, with a max queue depth of 5
-- 📊 **Real-time Progress** — Live diffusion step progress (percentage + ETA) streamed to the mobile client via polling
-- 🔄 **Job Cancellation** — Cancel an in-progress generation mid-diffusion
-- 🗂️ **Personal Gallery** — Every completed image is saved and accessible per-user
-- 🛡️ **Admin Dashboard** — Full user and image management for admins
-- 🐳 **Docker-ready** — One-command deployment with Docker Compose
+Built with **Expo** for seamless deployment across Android, iOS, and Web, and a **FastAPI** backend for image processing, queueing, and cancellation logic. Integrated **CLIP Tokenizer** with a custom **UNet-based Diffusion Model** for high-quality generation.
+
+---
+
+## Features
+
+- **Text-to-Image** — Generate AI art from any written prompt using a custom Stable Diffusion pipeline.
+- **Image-to-Image (img2img)** — Upload a reference image and transform or enhance it with new prompts or styles.
+- **Async Queue System** — Requests are queued and processed one-at-a-time to avoid GPU/CPU contention, with a max queue depth of 5.
+- **Real-time Progress** — Live diffusion step progress (percentage + ETA) streamed to the client via polling.
+- **Cancel Generation** — Cancel pending or in-progress image generation tasks mid-diffusion from your queue.
+- **Personal Gallery** — Every completed image is saved and accessible per-user.
+- **Admin Dashboard** — Full user and image management for admins.
+- **Cross-platform** — Runs on Android, iOS, and Web via Expo.
+- **Docker-ready** — One-command deployment with Docker Compose.
 
 ---
 
@@ -59,20 +71,20 @@ NeuroFusion is an end-to-end AI image generation platform built on top of a **fr
                               ┌─────────────────────────────────┐
                               │       Stable Diffusion          │
                               │                                 │
-                              │ ┌─────────┐ ┌─────────┐        │
-                              │ │  CLIP   │ │   VAE   │        │
-                              │ │ Encoder │ │ Encoder │        │
-                              │ └─────────┘ └─────────┘        │
+                              │ ┌─────────┐ ┌─────────┐         │
+                              │ │  CLIP   │ │   VAE   │         │
+                              │ │ Encoder │ │ Encoder │         │
+                              │ └─────────┘ └─────────┘         │
                               │           │                     │
-                              │     ┌─────▼─────┐              │
-                              │     │   UNet    │              │
-                              │     │ Diffusion │              │
-                              │     └─────┬─────┘              │
+                              │     ┌─────▼─────┐               │
+                              │     │   UNet    │               │
+                              │     │ Diffusion │               │
+                              │     └─────┬─────┘               │
                               │           │                     │
-                              │     ┌─────▼─────┐              │
-                              │     │    VAE    │              │
-                              │     │  Decoder  │              │
-                              │     └───────────┘              │
+                              │     ┌─────▼─────┐               │
+                              │     │    VAE    │               │
+                              │     │  Decoder  │               │
+                              │     └───────────┘               │
                               └─────────────────────────────────┘
                                                    │
                                                    ▼
@@ -115,7 +127,7 @@ Prompt Text
 ┌──────────────────────────────────────────────────────────┐
 │  CLIP Text Encoder  (backend/sd/clip.py)                 │
 │  Token IDs → Context Embeddings (768-dim)                │
-│  Used for both conditional (prompt) and                   │
+│  Used for both conditional (prompt) and                  │
 │  unconditional (negative prompt) embeddings              │
 └───────────────────────┬──────────────────────────────────┘
                         │
@@ -128,8 +140,8 @@ Prompt Text
                         │
 ┌───────────────────────▼──────────────────────────────────┐
 │  VAE Encoder  (backend/sd/encoder.py)  [img2img only]    │
-│  Input Image (512×512 RGB)  →  Latent Space (64×64×4)   │
-│  Adds noise at strength t ∈ [0,1] (default: 0.6)        │
+│  Input Image (512×512 RGB)  →  Latent Space (64×64×4)    │
+│  Adds noise at strength t ∈ [0,1] (default: 0.6)         │
 └───────────────────────┬──────────────────────────────────┘
                         │
 ┌───────────────────────▼──────────────────────────────────┐
@@ -168,16 +180,9 @@ Prompt Text
 | `backend/sd/model_loader.py` | Loads all model weights from the `.ckpt` checkpoint file |
 | `backend/sd/model_converter.py` | Converts HuggingFace/CompVis weight keys to match custom architecture |
 
-### Model Weights
-
-The pipeline loads weights from:
-```
-backend/data/v1-5-pruned-emaonly.ckpt
 ```
 
-> This is the official Stable Diffusion v1.5 EMA-only checkpoint from RunwayML (~4 GB). It must be downloaded separately and placed at the above path.
 
-**Download:** [Hugging Face — runwayml/stable-diffusion-v1-5](https://huggingface.co/runwayml/stable-diffusion-v1-5/blob/main/v1-5-pruned-emaonly.ckpt)
 
 ---
 
@@ -374,11 +379,39 @@ expo_img-v2/
 |--------|------|-------------|
 | **Login** | `login.jsx` | Email/password login, admin role redirect, dark glassmorphism UI |
 | **Signup** | `signup.jsx` | User registration with validation |
-| **Generate** | `generate.jsx` | Prompt + negative prompt input, image picker for img2img, queue submission, "See Progress →" link |
+| **Generate** | `generate.jsx` | Prompt + negative prompt input, image picker for img2img, queue submission, "See Progress" link |
 | **Gallery** | `gallery.jsx` | Grid view of all user-generated images, tap to enlarge |
 | **Account** | `account.jsx` | Username, email, join date, total images generated |
 | **My Queue** | `MyQueue.jsx` | Live queue status (QUEUED / PROCESSING / DONE / FAILED / CANCELLED), animated progress bar, ETA countdown, cancel/remove actions, pull-to-refresh, clear all |
 | **Admin Dashboard** | `AdminDashboard.jsx` | List all users, drill into any user to see their profile + all generated images, delete users or individual images |
+
+---
+
+## Example Generations
+
+<img src="https://github.com/user-attachments/assets/2e664f49-05cb-4172-b9db-70ffc4fe66d6" width="300"/>
+<img src="https://github.com/user-attachments/assets/0339625d-03d0-404d-88dd-bc9b2415ef08" width="300"/>
+<img src="https://github.com/user-attachments/assets/f594154f-392d-4d43-ac78-f283a5302f59" width="300"/>
+<img src="https://github.com/user-attachments/assets/e4f48635-e39e-4bfd-9c3d-4642794b3c49" width="300"/>
+<img src="https://github.com/user-attachments/assets/b56904ef-b78c-46e6-855e-c541019a423a" width="300"/>
+<img src="https://github.com/user-attachments/assets/a680e117-b572-4b19-a17b-06da2ca6a1d0" width="300"/>
+
+<br/><br/>
+
+### Hyperparameter Comparison
+
+Below are example outputs generated using the same prompt. Differences in images arise due to changes in hyperparameters such as CFG scale, inference steps, and seed.
+
+<img width="1204" height="621" alt="Hyperparameter comparison 1" src="https://github.com/user-attachments/assets/cb166f56-7206-4609-b21d-8ea10f5b8b96" />
+
+<img width="1199" height="612" alt="Hyperparameter comparison 2" src="https://github.com/user-attachments/assets/5c3ba0b9-5ddc-45d0-8b79-42e2beb60211" />
+
+---
+
+## App Overview and Working
+
+- [Watch Web Demo (Download/View)](https://github.com/user-attachments/assets/4dfeb53a-b648-4bef-9265-82cfb9ad1df7)
+- [Watch Mobile Demo (Download/View)](https://github.com/user-attachments/assets/e8cfd03a-a0ef-413e-98a9-2ec217bc2880)
 
 ---
 
@@ -460,8 +493,8 @@ In Docker, these are set via the `environment` block in `docker-compose.yml` and
 #### 1. Clone & Install Frontend
 
 ```bash
-git clone <repo-url>
-cd expo_img-v2
+git clone https://github.com/jatinnathh/NeuroFusion.git
+cd NeuroFusion
 npm install
 ```
 
@@ -524,20 +557,26 @@ The Docker setup runs both the FastAPI backend and Expo together in a single con
 #### 1. Update IP Before Building
 
 ```bash
-python update_ip.py   # Writes your host IP to ip.json files
+python update_ip.py
 ```
 
-#### 2. Build and Start
+#### 2. Allow Firewall (Windows)
 
 ```bash
-docker-compose up --build
+netsh advfirewall firewall add rule name="Allow Port 8000" dir=in action=allow protocol=TCP localport=8000
+```
+
+#### 3. Build and Start
+
+```bash
+docker compose up --build
 ```
 
 This starts:
 - **backend** container on ports `8000` (FastAPI) and `8081` (Expo)
 - **mysql** container on host port `3307` → container port `3306`
 
-#### 3. Access
+#### 4. Access
 
 | Service | URL |
 |---------|-----|
@@ -622,7 +661,7 @@ User submits prompt
    Job succeeds      Job cancelled/fails
          │                │
   status='done'    status='failed'/'cancelled'
-  result_url set   
+  result_url set
   images_generated row inserted
 ```
 
@@ -644,21 +683,15 @@ The default admin account is seeded on first startup:
 - Email: `jatin123@gmail.com`
 - Password: `jatin123`
 
-> ⚠️ Change the default admin credentials before any production deployment.
+> **Warning:** Change the default admin credentials before any production deployment.
 
 ---
+---
 
-## Known Limitations
+## Reference Papers
 
-| Limitation | Details |
-|-----------|---------|
-| **CPU-only by default** | Generation takes 5–20 min per image. Change to `DEVICE = "cuda"` for GPU. |
-| **Passwords stored in plaintext** | The codebase stores passwords without hashing. Add `bcrypt` hashing before production use. |
-| **No JWT authentication** | API endpoints are not token-protected. All `/users` and admin routes are publicly accessible. |
-| **Fixed seed** | Seed is hardcoded to `42`. Uncomment the `random.randint` line in `main.py` for varied outputs. |
-| **No file cleanup on image delete** | Deleting an image record does not remove the PNG file from `saved_images/`. |
-| **Queue not persistent across restarts** | The in-memory deque is cleared on restart. Jobs in MySQL with `queued` status will never be processed unless re-submitted. |
-| **CORS fully open** | `allow_origins=["*"]` — restrict to specific origins for production. |
+- Rombach, R., Blattmann, A., Lorenz, D., Esser, P., & Ommer, B. (2022). [High-Resolution Image Synthesis with Latent Diffusion Models](https://arxiv.org/pdf/2112.10752).
+- Ho, J., Jain, A., & Abbeel, P. (2020). [Denoising Diffusion Probabilistic Models](https://arxiv.org/pdf/2006.11239).
 
 ---
 
@@ -669,5 +702,5 @@ This project is for educational and personal use. The Stable Diffusion v1.5 mode
 ---
 
 <div align="center">
-  <strong>Built with ❤️ using React Native, FastAPI, and Stable Diffusion</strong>
+  <strong>Built using React Native, FastAPI, and Stable Diffusion</strong>
 </div>
